@@ -1,0 +1,51 @@
+﻿{
+  "expo": {
+    "name": "communicate",
+    "slug": "communicate",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/App-icon.jpg",
+    "scheme": "youwillneverdie",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "icon": "./assets/images/app-icon.jpg"
+    },
+    "android": {
+      "icon": "./assets/images/app-icon.jpg",
+      "package": "org.afterlifeinstitute.communicate",
+      "softwareKeyboardLayoutMode": "resize",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/images/app-icon.jpg"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "server",
+      "favicon": "./assets/images/app-icon.jpg"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/app-icon.jpg",
+          "imageWidth": 280,
+          "resizeMode": "contain"
+        }
+      ],
+      "expo-iap",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b3e08a18-5ee1-4e38-88a3-48b5e737944e"
+      }
+    }
+  }
+}
