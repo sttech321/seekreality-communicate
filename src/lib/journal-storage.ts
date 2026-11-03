@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { File, Paths } from 'expo-file-system';
 
 export type JournalEntry = {
   lessonSlug: string;
@@ -13,12 +14,49 @@ export type JournalEntry = {
 type JournalEntryIndex = Omit<JournalEntry, 'text'> & { chunks: number };
 
 const INDEX_KEY = 'communicate_journal_v1:index';
+const INDEX_V2_KEY = 'communicate_journal_v1:index:v2';
+const INDEX_CHUNK_CODE_POINTS = 300;
 const ENTRY_KEY = (slug: string) => `communicate_journal_v1:${encodeURIComponent(slug)}`;
 const CHUNK_CODE_POINTS = 300;
+let fallbackWrites = Promise.resolve();
+
+function getFallbackFile() {
+  return new File(Paths.document, 'communicate-journal-fallback.json');
+}
+
+async function readFallbackStore(): Promise<Record<string, string | null>> {
+  const fallbackFile = getFallbackFile();
+  if (!fallbackFile.exists) return {};
+  try {
+    return JSON.parse(await fallbackFile.text()) as Record<string, string | null>;
+  } catch {
+    return {};
+  }
+}
+
+async function updateFallbackStore(key: string, value: string | null | undefined): Promise<void> {
+  const update = fallbackWrites.then(async () => {
+    const fallbackFile = getFallbackFile();
+    const store = await readFallbackStore();
+    if (value === undefined && !Object.prototype.hasOwnProperty.call(store, key)) return;
+    if (value === undefined) delete store[key];
+    else store[key] = value;
+    if (!fallbackFile.exists) fallbackFile.create();
+    await fallbackFile.write(JSON.stringify(store));
+  });
+  fallbackWrites = update.catch(() => {});
+  await update;
+}
 
 async function readValue(key: string): Promise<string | null> {
   if (Platform.OS === 'web') return localStorage.getItem(key);
-  return SecureStore.getItemAsync(key);
+  const fallback = await readFallbackStore();
+  if (Object.prototype.hasOwnProperty.call(fallback, key)) return fallback[key];
+  try {
+    return await SecureStore.getItemAsync(key);
+  } catch {
+    return null;
+  }
 }
 
 async function writeValue(key: string, value: string): Promise<void> {
@@ -26,7 +64,12 @@ async function writeValue(key: string, value: string): Promise<void> {
     localStorage.setItem(key, value);
     return;
   }
-  await SecureStore.setItemAsync(key, value);
+  try {
+    await SecureStore.setItemAsync(key, value);
+    await updateFallbackStore(key, undefined).catch(() => {});
+  } catch {
+    await updateFallbackStore(key, value);
+  }
 }
 
 async function deleteValue(key: string): Promise<void> {
@@ -34,11 +77,25 @@ async function deleteValue(key: string): Promise<void> {
     localStorage.removeItem(key);
     return;
   }
-  await SecureStore.deleteItemAsync(key);
+  try {
+    await SecureStore.deleteItemAsync(key);
+    await updateFallbackStore(key, undefined).catch(() => {});
+  } catch {
+    await updateFallbackStore(key, null);
+  }
 }
 
 async function readIndex(): Promise<JournalEntryIndex[]> {
-  const value = await readValue(INDEX_KEY);
+  const countValue = await readValue(INDEX_V2_KEY);
+  let value: string | null = null;
+  if (countValue) {
+    const count = Number(countValue);
+    if (!Number.isInteger(count) || count < 0) return [];
+    const chunks = await Promise.all(Array.from({ length: count }, (_, index) => readValue(`${INDEX_V2_KEY}:${index}`)));
+    value = chunks.map((chunk) => chunk || '').join('');
+  } else {
+    value = await readValue(INDEX_KEY);
+  }
   if (!value) return [];
   try {
     const parsed: unknown = JSON.parse(value);
@@ -93,5 +150,17 @@ export async function saveJournalEntry(entry: JournalEntry): Promise<void> {
     updatedAt: entry.updatedAt,
     chunks: chunks.length,
   };
-  await writeValue(INDEX_KEY, JSON.stringify([updated, ...index.filter((item) => item.lessonSlug !== entry.lessonSlug)]));
+  const serializedIndex = JSON.stringify([updated, ...index.filter((item) => item.lessonSlug !== entry.lessonSlug)]);
+  const indexPoints = Array.from(serializedIndex);
+  const indexChunks: string[] = [];
+  for (let offset = 0; offset < indexPoints.length; offset += INDEX_CHUNK_CODE_POINTS) {
+    indexChunks.push(indexPoints.slice(offset, offset + INDEX_CHUNK_CODE_POINTS).join(''));
+  }
+  const previousCount = Number(await readValue(INDEX_V2_KEY) || 0);
+  await Promise.all(indexChunks.map((chunk, chunkIndex) => writeValue(`${INDEX_V2_KEY}:${chunkIndex}`, chunk)));
+  for (let chunkIndex = indexChunks.length; chunkIndex < previousCount; chunkIndex += 1) {
+    await deleteValue(`${INDEX_V2_KEY}:${chunkIndex}`);
+  }
+  await writeValue(INDEX_V2_KEY, String(indexChunks.length));
+  await deleteValue(INDEX_KEY);
 }

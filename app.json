@@ -1,11 +1,11 @@
 ﻿{
   "expo": {
-    "name": "communicate",
+    "name": "Communicate",
     "slug": "communicate",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/App-icon.jpg",
-    "scheme": "youwillneverdie",
+    "scheme": "communicate",
     "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/images/app-icon.jpg"
@@ -21,7 +21,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "server",
+      "output": "single",
       "favicon": "./assets/images/app-icon.jpg"
     },
     "plugins": [
@@ -44,7 +44,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "b3e08a18-5ee1-4e38-88a3-48b5e737944e"
+        "projectId": "969f03a1-2214-4241-8ab1-5b1f3007cdab"
       }
     }
   }

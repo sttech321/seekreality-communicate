@@ -62,9 +62,12 @@ export function JournalPrompt({ lesson }: { lesson: LessonContent }) {
       await saveJournalEntry(saved);
       setEntry(saved);
       setEditing(false);
-      setEntries(await getAllJournalEntries());
-    } catch {
-      setError('Your entry could not be saved. Please try again.');
+      setEntries((current) => [saved, ...current.filter((item) => item.lessonSlug !== saved.lessonSlug)]
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+    } catch (cause) {
+      console.error('Failed to save journal entry:', cause);
+      const detail = cause instanceof Error ? cause.message : '';
+      setError(detail ? `Your entry could not be saved: ${detail}` : 'Your entry could not be saved. Please try again.');
     } finally {
       setSaving(false);
     }

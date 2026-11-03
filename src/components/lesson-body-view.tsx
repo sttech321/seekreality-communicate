@@ -29,10 +29,15 @@ export function LessonBodyView({ lesson }: { lesson: LessonContent }) {
   const discussion = Array.isArray(lesson.discussion) ? lesson.discussion.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : [];
   const topMedia = lesson.media && typeof lesson.media.src === 'string' ? lesson.media : null;
   const hasTopMediaInBody = topMedia && blocks.some((block) => block.media?.src === topMedia.src);
+  const audioBlocks = blocks.filter((block) => block.media && typeof block.media === 'object' && block.media.type !== 'video');
+  const contentBlocks = blocks.filter((block) => !block.media || typeof block.media !== 'object' || block.media.type === 'video');
+  const topAudio = topMedia && topMedia.type !== 'video';
 
   return <AudioContext.Provider value={{ player, status, activeSrc, setActiveSrc }}><ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-    {topMedia && !hasTopMediaInBody && <MediaBlock media={topMedia} styles={styles} />}
-    {blocks.map((block, index) => <BlockView key={`${index}-${Object.keys(block)[0] || 'block'}`} block={block} styles={styles} />)}
+    {topMedia && !topAudio && !hasTopMediaInBody && <MediaBlock media={topMedia} styles={styles} />}
+    {contentBlocks.map((block, index) => <BlockView key={`${index}-${Object.keys(block)[0] || 'block'}`} block={block} styles={styles} />)}
+    {topAudio && !hasTopMediaInBody && <MediaBlock media={topMedia} styles={styles} />}
+    {audioBlocks.map((block, index) => <MediaBlock key={`audio-${index}`} media={block.media} styles={styles} />)}
     {!!lesson.reflection?.trim() && <JournalPrompt lesson={lesson} />}
     {!!lesson.bridge?.trim() && <Text style={styles.bridge}>{lesson.bridge}</Text>}
     {discussion.length > 0 && <View style={styles.discussionCard}>

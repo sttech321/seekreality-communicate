@@ -126,7 +126,7 @@ export default function AuthScreen() {
 
   const title = mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Begin your journey'
     : mode === 'forgot' ? 'Reset your password' : 'Check your email';
-  const subtitle = mode === 'login' ? 'Sign in to continue your path.' : mode === 'register'
+  const subtitle = mode === 'login' ? 'Sign in to continue your journey. Thank you for supporting the Institute\'s mission.' : mode === 'register'
     ? 'Create an account and continue exploring.' : mode === 'forgot'
       ? 'We’ll send a one-time code to your email.' : 'Enter the 6-digit code and choose a new password.';
   const showPassword = mode === 'login' || mode === 'register' || mode === 'reset';
